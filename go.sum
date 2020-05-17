@@ -1,2 +1,2 @@
-github.com/gdm85/go-rencode v0.1.5 h1:pa+2F/QjXGVwr1+T2syUx8YhL15KWj4fStFLr5tfLJY=
-github.com/gdm85/go-rencode v0.1.5/go.mod h1:0dr3BuaKzeseY1of6o1KRTGB/Oo7eio+YEyz8KDp5+s=
+github.com/PietroCarrara/go-rencode v0.1.6-0.20200517143806-41f31625d5bc h1:9SVQ49WD9iiOk4b9/dFLHJzaX8OAjUYsZfkfc+3lYh0=
+github.com/PietroCarrara/go-rencode v0.1.6-0.20200517143806-41f31625d5bc/go.mod h1:0dr3BuaKzeseY1of6o1KRTGB/Oo7eio+YEyz8KDp5+s=

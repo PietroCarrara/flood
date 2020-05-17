@@ -4,16 +4,41 @@ import (
 	"bytes"
 	"compress/zlib"
 	"crypto/tls"
+	"errors"
 	"io"
 	"log"
 
 	"github.com/gdm85/go-rencode"
 )
 
+const (
+	rpcResponse = 1
+	rpcError    = 2
+	rpcEvent    = 3
+)
+
 // Connection represents a connetion to the server
 type Connection struct {
 	conn io.ReadWriteCloser
 	open bool
+
+	responses map[uint32]chan RPCResponseData
+	errors    map[uint32]chan RPCErrorData
+
+	events chan RPCEventData
+}
+
+type RPCResponseData interface{}
+
+type RPCErrorData struct {
+	ExceptionType    string
+	ExceptionMessage string
+	Traceback        string
+}
+
+type RPCEventData struct {
+	EventName string
+	Data      []interface{}
 }
 
 // Close closes the connection
@@ -29,17 +54,20 @@ func Connect(address string) (*Connection, error) {
 	})
 
 	res := &Connection{
-		conn: conn,
-		open: true,
+		conn:      conn,
+		open:      true,
+		responses: make(map[uint32]chan RPCResponseData),
+		errors:    make(map[uint32]chan RPCErrorData),
+		events:    make(chan RPCEventData),
 	}
 
-	go res.read()
+	go res.receive()
 
 	return res, err
 }
 
 // Request sends a RPC Request to the server
-func (c Connection) Request(id uint32, method string, args []interface{}, kwargs map[string]interface{}) {
+func (c Connection) Request(id uint32, method string, args []interface{}, kwargs map[string]interface{}) (*RPCResponseData, *RPCErrorData) {
 	buf := &bytes.Buffer{}
 
 	dict := rencode.Dictionary{}
@@ -54,18 +82,66 @@ func (c Connection) Request(id uint32, method string, args []interface{}, kwargs
 
 	message := NewMessage(buf.Bytes())
 
+	c.responses[id] = make(chan RPCResponseData)
+	c.errors[id] = make(chan RPCErrorData)
+
 	c.conn.Write(message.Pack())
+
+	var responseData *RPCResponseData
+	var errrorData *RPCErrorData
+
+	select {
+	case res := <-c.responses[id]:
+		responseData = &res
+	case err := <-c.errors[id]:
+		errrorData = &err
+	}
+
+	delete(c.responses, id)
+	delete(c.errors, id)
+
+	return responseData, errrorData
 }
 
-func (c *Connection) read() {
-
-	buffer := make([]byte, 1024)
+func (c *Connection) receive() {
 
 	for c.open {
-		n, _ := c.conn.Read(buffer)
+		m, _ := ReadMessage(c.conn)
 
-		if n > 0 {
-			log.Println(string(buffer[:n]))
+		if m == nil {
+			continue
+		}
+
+		compressed, _ := zlib.NewReader(bytes.NewBuffer(m.Body))
+		decoder := rencode.NewDecoder(compressed)
+
+		var body rencode.List
+		decoder.Scan(&body)
+
+		var messageType int
+		body.Scan(&messageType)
+
+		switch messageType {
+		case rpcResponse:
+			log.Println("Response!")
+
+			var rid int
+			var values RPCResponseData
+			body.Scan(&messageType, &rid, &values)
+
+			c.responses[uint32(rid)] <- values
+		case rpcError:
+			log.Println("Error!")
+
+			var rid int
+			var data RPCErrorData
+			body.Scan(&messageType, &rid, &data.ExceptionType, &data.ExceptionMessage, &data.Traceback)
+
+			c.errors[uint32(rid)] <- data
+		case rpcEvent:
+			log.Println("Event!")
+		default:
+			panic(errors.New("unknown message type"))
 		}
 	}
 }
