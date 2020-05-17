@@ -5,8 +5,8 @@ import (
 	"compress/zlib"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 
 	"github.com/gdm85/go-rencode"
 )
@@ -28,17 +28,28 @@ type Connection struct {
 	events chan RPCEventData
 }
 
-type RPCResponseData interface{}
+type RPCResponseData struct {
+	rencode.List
+}
 
 type RPCErrorData struct {
 	ExceptionType    string
 	ExceptionMessage string
+	ExceptionKwargs  map[string]interface{}
 	Traceback        string
 }
 
 type RPCEventData struct {
 	EventName string
 	Data      []interface{}
+}
+
+func (err *RPCErrorData) Error() string {
+	if err.ExceptionMessage != "" {
+		return fmt.Sprintf("%s: %v", err.ExceptionType, err.ExceptionMessage)
+	}
+
+	return err.ExceptionType
 }
 
 // Close closes the connection
@@ -66,13 +77,35 @@ func Connect(address string) (*Connection, error) {
 	return res, err
 }
 
-// Request sends a RPC Request to the server
-func (c Connection) Request(id uint32, method string, args []interface{}, kwargs map[string]interface{}) (*RPCResponseData, *RPCErrorData) {
+// Request sends a RPC request that has no kwargs
+func (c Connection) Request(id uint32, method string, args ...interface{}) (*RPCResponseData, *RPCErrorData) {
+	return c.RequestArgsKwargs(id, method, args, map[string]interface{}{})
+}
+
+// Request sends a RPC request that has kwargs
+func (c Connection) RequestKwargs(id uint32, method string, kwargs map[string]interface{}, args ...interface{}) (*RPCResponseData, *RPCErrorData) {
+	return c.RequestArgsKwargs(id, method, args, kwargs)
+}
+
+// RequestArgsKwargs sends a RPC Request to the server using args and kwargs
+func (c Connection) RequestArgsKwargs(id uint32, method string, args []interface{}, kwargs map[string]interface{}) (*RPCResponseData, *RPCErrorData) {
 	buf := &bytes.Buffer{}
 
 	dict := rencode.Dictionary{}
 	for key, value := range kwargs {
 		dict.Add(key, value)
+	}
+
+	// TODO: Fix go-rencode aversion to maps
+	for i, val := range args {
+		switch v := val.(type) {
+		case map[string]interface{}:
+			dict := rencode.Dictionary{}
+			for key, value := range v {
+				dict.Add(key, value)
+			}
+			args[i] = dict
+		}
 	}
 
 	compressed, _ := zlib.NewWriterLevel(buf, zlib.NoCompression)
@@ -123,23 +156,30 @@ func (c *Connection) receive() {
 
 		switch messageType {
 		case rpcResponse:
-			log.Println("Response!")
-
 			var rid int
-			var values RPCResponseData
+			var values interface{}
 			body.Scan(&messageType, &rid, &values)
 
-			c.responses[uint32(rid)] <- values
+			c.responses[uint32(rid)] <- RPCResponseData{rencode.NewList(values)}
 		case rpcError:
-			log.Println("Error!")
-
 			var rid int
 			var data RPCErrorData
-			body.Scan(&messageType, &rid, &data.ExceptionType, &data.ExceptionMessage, &data.Traceback)
+			var args interface{}
+			var kwargs rencode.Dictionary
+			body.Scan(&messageType, &rid, &data.ExceptionType, &args, &kwargs, &data.Traceback)
+
+			switch v := args.(type) {
+			case rencode.List:
+				v.Scan(&data.ExceptionMessage, &data.ExceptionType, &data.Traceback)
+			case string:
+				data.ExceptionMessage = v
+			default:
+				panic("exception message of type unknown")
+			}
 
 			c.errors[uint32(rid)] <- data
 		case rpcEvent:
-			log.Println("Event!")
+			// TODO
 		default:
 			panic(errors.New("unknown message type"))
 		}
