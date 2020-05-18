@@ -6,9 +6,13 @@ import (
 	"github.com/gdm85/go-rencode"
 )
 
+type Core struct {
+	f *Flood
+}
+
 // AddTorrentMagnet adds a torrent from a magnet link and returns its ID
-func (f *Flood) AddTorrentMagnet(uri string) (string, error) {
-	data, err := f.conn.Request(f.NextID(), "core.add_torrent_magnet", uri, map[string]interface{}{})
+func (c *Core) AddTorrentMagnet(uri string) (string, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.add_torrent_magnet", uri, map[string]interface{}{})
 
 	if err != nil {
 		return "", err
@@ -21,8 +25,8 @@ func (f *Flood) AddTorrentMagnet(uri string) (string, error) {
 }
 
 // GetEnabledPlugins returns a list of enabled plugins in the core
-func (f *Flood) GetEnabledPlugins() ([]string, error) {
-	data, err := f.conn.Request(f.NextID(), "core.get_enabled_plugins")
+func (c *Core) GetEnabledPlugins() ([]string, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.get_enabled_plugins")
 
 	if err != nil {
 		return nil, err
@@ -45,8 +49,8 @@ func (f *Flood) GetEnabledPlugins() ([]string, error) {
 }
 
 // GetExternalIP returns the external IP address received from libtorrent
-func (f *Flood) GetExternalIP() (net.IP, error) {
-	data, err := f.conn.Request(f.NextID(), "core.get_external_ip")
+func (c *Core) GetExternalIP() (net.IP, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.get_external_ip")
 
 	if err != nil {
 		return nil, err
