@@ -4,3 +4,11 @@ github.com/PietroCarrara/go-rencode v0.1.6-0.20200517143806-41f31625d5bc h1:9SVQ
 github.com/PietroCarrara/go-rencode v0.1.6-0.20200517143806-41f31625d5bc/go.mod h1:0dr3BuaKzeseY1of6o1KRTGB/Oo7eio+YEyz8KDp5+s=
 github.com/PietroCarrara/go-rencode v0.1.6-0.20200518140251-168ecd1aeb04 h1:42ouFllBZYHEoVZqAqT4xvU0/cdM5j/XfEW6UfkZgQ0=
 github.com/PietroCarrara/go-rencode v0.1.6-0.20200518140251-168ecd1aeb04/go.mod h1:0dr3BuaKzeseY1of6o1KRTGB/Oo7eio+YEyz8KDp5+s=
+github.com/PietroCarrara/rencode v0.0.2 h1:/+KmwzKrD157DrmTTG6JQA3egAOGZhpPmUvz36UwyFo=
+github.com/PietroCarrara/rencode v0.0.2/go.mod h1:AKtvjdisB1VNTBF2aW2JLt8wG4JQVIZ2TjEUym5gjo0=
+github.com/PietroCarrara/rencode v0.0.3 h1:Yq9blKB1NH4KX7eBAYTO0anuv2FgIHZ49GOOSeVOPYE=
+github.com/PietroCarrara/rencode v0.0.3/go.mod h1:AKtvjdisB1VNTBF2aW2JLt8wG4JQVIZ2TjEUym5gjo0=
+github.com/PietroCarrara/rencode v0.0.4 h1:aEUQ/EaIMSoQ4POX/oIyPvfxiu02jsqKOcXdiR8EJWc=
+github.com/PietroCarrara/rencode v0.0.4/go.mod h1:AKtvjdisB1VNTBF2aW2JLt8wG4JQVIZ2TjEUym5gjo0=
+github.com/gdm85/go-rencode v0.1.5 h1:pa+2F/QjXGVwr1+T2syUx8YhL15KWj4fStFLr5tfLJY=
+github.com/gdm85/go-rencode v0.1.5/go.mod h1:0dr3BuaKzeseY1of6o1KRTGB/Oo7eio+YEyz8KDp5+s=

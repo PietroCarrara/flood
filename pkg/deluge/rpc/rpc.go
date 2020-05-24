@@ -7,8 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 
-	"github.com/gdm85/go-rencode"
+	"github.com/PietroCarrara/rencode"
 )
 
 const (
@@ -22,29 +23,27 @@ type Connection struct {
 	conn io.ReadWriteCloser
 	open bool
 
-	responses map[uint32]chan RPCResponseData
-	errors    map[uint32]chan RPCErrorData
+	responses map[int]chan ResponseData
+	errors    map[int]chan ErrorData
 
-	events chan RPCEventData
+	events chan EventData
 }
 
-type RPCResponseData struct {
-	rencode.List
-}
+type ResponseData []interface{}
 
-type RPCErrorData struct {
+type ErrorData struct {
 	ExceptionType    string
 	ExceptionMessage string
 	ExceptionKwargs  map[string]interface{}
 	Traceback        string
 }
 
-type RPCEventData struct {
+type EventData struct {
 	EventName string
 	Data      []interface{}
 }
 
-func (err *RPCErrorData) Error() string {
+func (err *ErrorData) Error() string {
 	if err.ExceptionMessage != "" {
 		return fmt.Sprintf("%s: %v", err.ExceptionType, err.ExceptionMessage)
 	}
@@ -67,9 +66,9 @@ func Connect(address string) (*Connection, error) {
 	res := &Connection{
 		conn:      conn,
 		open:      true,
-		responses: make(map[uint32]chan RPCResponseData),
-		errors:    make(map[uint32]chan RPCErrorData),
-		events:    make(chan RPCEventData),
+		responses: make(map[int]chan ResponseData),
+		errors:    make(map[int]chan ErrorData),
+		events:    make(chan EventData),
 	}
 
 	go res.receive()
@@ -78,50 +77,50 @@ func Connect(address string) (*Connection, error) {
 }
 
 // Request sends a RPC request that has no kwargs
-func (c Connection) Request(id uint32, method string, args ...interface{}) (*RPCResponseData, *RPCErrorData) {
+func (c Connection) Request(id int, method string, args ...interface{}) (*ResponseData, error) {
 	return c.RequestArgsKwargs(id, method, args, map[string]interface{}{})
 }
 
 // Request sends a RPC request that has kwargs
-func (c Connection) RequestKwargs(id uint32, method string, kwargs map[string]interface{}, args ...interface{}) (*RPCResponseData, *RPCErrorData) {
+func (c Connection) RequestKwargs(id int, method string, kwargs map[string]interface{}, args ...interface{}) (*ResponseData, error) {
 	return c.RequestArgsKwargs(id, method, args, kwargs)
 }
 
 // RequestArgsKwargs sends a RPC Request to the server using args and kwargs
-func (c Connection) RequestArgsKwargs(id uint32, method string, args []interface{}, kwargs map[string]interface{}) (*RPCResponseData, *RPCErrorData) {
+func (c Connection) RequestArgsKwargs(id int, method string, args []interface{}, kwargs map[string]interface{}) (*ResponseData, error) {
 	buf := &bytes.Buffer{}
 
-	dict := rencode.Dictionary{}
-	for key, value := range kwargs {
-		dict.Add(key, value)
-	}
-
-	// TODO: Fix go-rencode aversion to maps
-	for i, val := range args {
-		switch v := val.(type) {
-		case map[string]interface{}:
-			dict := rencode.Dictionary{}
-			for key, value := range v {
-				dict.Add(key, value)
-			}
-			args[i] = dict
-		}
-	}
-
 	compressed, _ := zlib.NewWriterLevel(buf, zlib.NoCompression)
-	encoder := rencode.NewEncoder(compressed)
-	encoder.Encode(rencode.NewList(rencode.NewList(id, method, rencode.NewList(args...), dict)))
+
+	call := rencode.List{
+		rencode.List{
+			id,
+			method,
+			args,
+			kwargs,
+		},
+	}
+
+	bytes, err := rencode.Encode(call)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = compressed.Write(bytes)
+	if err != nil {
+		return nil, err
+	}
 	compressed.Close()
 
 	message := NewMessage(buf.Bytes())
 
-	c.responses[id] = make(chan RPCResponseData)
-	c.errors[id] = make(chan RPCErrorData)
+	c.responses[id] = make(chan ResponseData)
+	c.errors[id] = make(chan ErrorData)
 
 	c.conn.Write(message.Pack())
 
-	var responseData *RPCResponseData
-	var errrorData *RPCErrorData
+	var responseData *ResponseData
+	var errrorData error
 
 	select {
 	case res := <-c.responses[id]:
@@ -146,38 +145,33 @@ func (c *Connection) receive() {
 		}
 
 		compressed, _ := zlib.NewReader(bytes.NewBuffer(m.Body))
-		decoder := rencode.NewDecoder(compressed)
+		bytes, _ := ioutil.ReadAll(compressed)
 
 		var body rencode.List
-		decoder.Scan(&body)
+		rencode.Decode(bytes, &body)
 
 		var messageType int
-		body.Scan(&messageType)
+		rencode.ScanSlice(body, &messageType)
 
 		switch messageType {
 		case rpcResponse:
 			var rid int
 			var values interface{}
-			body.Scan(&messageType, &rid, &values)
+			rencode.ScanSlice(body, nil, &rid, &values)
 
-			c.responses[uint32(rid)] <- RPCResponseData{rencode.NewList(values)}
+			c.responses[rid] <- ResponseData{values}
 		case rpcError:
 			var rid int
-			var data RPCErrorData
+			var data ErrorData
 			var args interface{}
-			var kwargs rencode.Dictionary
-			body.Scan(&messageType, &rid, &data.ExceptionType, &args, &kwargs, &data.Traceback)
+			var kwargs map[string]interface{}
+			rencode.ScanSlice(body, nil, &rid, &data.ExceptionType, &args, &kwargs, &data.Traceback)
 
-			switch v := args.(type) {
-			case rencode.List:
-				v.Scan(&data.ExceptionMessage, &data.ExceptionType, &data.Traceback)
-			case string:
-				data.ExceptionMessage = v
-			default:
-				panic("exception message of type unknown")
+			if data.ExceptionType == "WrappedException" {
+				rencode.ScanSlice(args, &data.ExceptionMessage, &data.ExceptionType, &data.Traceback)
 			}
 
-			c.errors[uint32(rid)] <- data
+			c.errors[rid] <- data
 		case rpcEvent:
 			// TODO
 		default:

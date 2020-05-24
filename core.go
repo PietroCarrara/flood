@@ -1,9 +1,10 @@
 package flood
 
 import (
+	"log"
 	"net"
 
-	"github.com/gdm85/go-rencode"
+	"github.com/PietroCarrara/rencode"
 )
 
 type Core struct {
@@ -19,7 +20,7 @@ func (c *Core) AddTorrentMagnet(uri string) (string, error) {
 	}
 
 	var id string
-	data.Scan(&id)
+	rencode.ScanSlice(data, &id)
 
 	return id, nil
 }
@@ -32,18 +33,8 @@ func (c *Core) GetEnabledPlugins() ([]string, error) {
 		return nil, err
 	}
 
-	var list rencode.List
-	data.Scan(&list)
-
 	var res []string
-	for list.Length() > 0 {
-		var str string
-		list.Scan(&str)
-
-		res = append(res, str)
-
-		list.Shift(1)
-	}
+	rencode.ScanSlice(data, &res)
 
 	return res, nil
 }
@@ -57,7 +48,24 @@ func (c *Core) GetExternalIP() (net.IP, error) {
 	}
 
 	var ip string
-	data.Scan(&ip)
+	rencode.ScanSlice(data, &ip)
 
 	return net.ParseIP(ip), nil
+}
+
+// GetTorrentsStatus returns all torrents
+func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keyOne string, keys ...string) error {
+	// Must have at least one key
+	keys = append(keys, keyOne)
+	data, err := c.f.conn.Request(c.f.NextID(), "core.get_torrents_status", filter, keys)
+
+	if err != nil {
+		return err
+	}
+
+	var dict map[string]interface{}
+	rencode.ScanSlice(data, &dict)
+
+	log.Println(dict)
+	return nil
 }

@@ -1,6 +1,6 @@
 package flood
 
-import "github.com/gdm85/go-rencode"
+import "github.com/PietroCarrara/rencode"
 
 type Label struct {
 	f *Flood
@@ -14,18 +14,8 @@ func (l *Label) GetLabels() ([]string, error) {
 		return nil, err
 	}
 
-	var list rencode.List
-	data.Scan(&list)
-
 	var res []string
-	for list.Length() > 0 {
-		var str string
-		list.Scan(&str)
-
-		res = append(res, str)
-
-		list.Shift(1)
-	}
+	rencode.ScanSlice(data, &res)
 
 	return res, nil
 }
