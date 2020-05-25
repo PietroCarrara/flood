@@ -2,6 +2,7 @@ package flood
 
 import "github.com/PietroCarrara/rencode"
 
+// Label represents the deluge Labels plugin
 type Label struct {
 	f *Flood
 }

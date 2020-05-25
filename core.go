@@ -1,12 +1,12 @@
 package flood
 
 import (
-	"log"
 	"net"
 
 	"github.com/PietroCarrara/rencode"
 )
 
+// Core represents the deluge Core class
 type Core struct {
 	f *Flood
 }
@@ -53,19 +53,30 @@ func (c *Core) GetExternalIP() (net.IP, error) {
 	return net.ParseIP(ip), nil
 }
 
-// GetTorrentsStatus returns all torrents
-func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keyOne string, keys ...string) error {
-	// Must have at least one key
-	keys = append(keys, keyOne)
+// GetTorrentsStatus returns the selected information about torrents that can be filtered
+// The filter is a map in the form "field" => value, and will only retain torrents where
+// torrent.field == value
+// The keys list is a list of the fields to be retrieved from the server
+// Missing fields will have their default zero value
+// Some fields, such as "files" may take a long time for the server to respond when
+// querying many torrents at the same time
+// Use flood.BasicData for a list of fields that are quick to load but contain useful
+// information
+// Fields that do not exist will be discarded by the server
+func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keys ...string) ([]TorrentStatus, error) {
 	data, err := c.f.conn.Request(c.f.NextID(), "core.get_torrents_status", filter, keys)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var dict map[string]interface{}
+	var dict map[string]map[string]interface{}
 	rencode.ScanSlice(data, &dict)
 
-	log.Println(dict)
-	return nil
+	var torrents []TorrentStatus
+	for _, v := range dict {
+		torrents = append(torrents, torrentStatusFromMap(v))
+	}
+
+	return torrents, nil
 }
