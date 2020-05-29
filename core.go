@@ -13,7 +13,13 @@ type Core struct {
 
 // AddTorrentMagnet adds a torrent from a magnet link and returns its ID
 func (c *Core) AddTorrentMagnet(uri string) (string, error) {
-	data, err := c.f.conn.Request(c.f.NextID(), "core.add_torrent_magnet", uri, map[string]interface{}{})
+	return c.AddTorrentMagnetOptions(uri, map[string]interface{}{})
+}
+
+// AddTorrentMagnetOptions adds a torrent from a magnet link with the given options
+// Returns the newly added torrent's id
+func (c *Core) AddTorrentMagnetOptions(uri string, options map[string]interface{}) (string, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.add_torrent_magnet", uri, options)
 
 	if err != nil {
 		return "", err
@@ -23,6 +29,18 @@ func (c *Core) AddTorrentMagnet(uri string) (string, error) {
 	rencode.ScanSlice(data, &id)
 
 	return id, nil
+}
+
+// PauseSession pauses the entire session
+func (c *Core) PauseSession() error {
+	_, err := c.f.conn.Request(c.f.NextID(), "core.pause_session")
+	return err
+}
+
+// ResumeSession sesumes the entire session
+func (c *Core) ResumeSession() error {
+	_, err := c.f.conn.Request(c.f.NextID(), "core.resume_session")
+	return err
 }
 
 // GetEnabledPlugins returns a list of enabled plugins in the core
