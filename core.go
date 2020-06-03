@@ -1,7 +1,9 @@
 package flood
 
 import (
+	"fmt"
 	"net"
+	"sort"
 
 	"github.com/PietroCarrara/rencode"
 )
@@ -71,16 +73,17 @@ func (c *Core) GetExternalIP() (net.IP, error) {
 	return net.ParseIP(ip), nil
 }
 
-// GetTorrentsStatus returns the selected information about torrents that can be filtered
+// GetTorrentsStatus returns the selected information about torrents that can be filtered.
 // The filter is a map in the form "field" => value, and will only retain torrents where
-// torrent.field == value
-// The keys list is a list of the fields to be retrieved from the server
-// Missing fields will have their default zero value
+// torrent.field == value.
+// The keys list is a list of the fields to be retrieved from the server.
+// Missing fields will have their default zero value.
 // Some fields, such as "files" may take a long time for the server to respond when
-// querying many torrents at the same time
+// querying many torrents at the same time.
 // Use flood.BasicData for a list of fields that are quick to load but contain useful
-// information
+// information.
 // Fields that do not exist will be discarded by the server
+// The returned array will be ordered lexicographically using the first provided key.
 func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keys ...string) ([]TorrentStatus, error) {
 	data, err := c.f.conn.Request(c.f.NextID(), "core.get_torrents_status", filter, keys)
 
@@ -92,9 +95,20 @@ func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keys ...string) 
 	rencode.ScanSlice(data, &dict)
 
 	var torrents []TorrentStatus
-	for _, v := range dict {
-		torrents = append(torrents, torrentStatusFromMap(v))
+	for hash, v := range dict {
+		t := torrentStatusFromMap(v)
+		if t.Hash == "" {
+			t.Hash = hash
+		}
+		torrents = append(torrents, t)
 	}
+
+	sort.Slice(torrents, func(i, j int) bool {
+		vi := fmt.Sprint(dict[torrents[i].Hash][keys[0]])
+		vj := fmt.Sprint(dict[torrents[j].Hash][keys[0]])
+
+		return vi < vj
+	})
 
 	return torrents, nil
 }

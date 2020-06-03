@@ -1,10 +1,12 @@
 package flood
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // BasicData is a collection of fields that can be quickly loaded by the deluge server
 // but contain useful information about a torrent
-var BasicData = []string{"hash", "finished", "paused", "progress", "total_size", "seeding", "name", "label"}
+var BasicData = []string{"name", "hash", "is_finished", "paused", "progress", "total_size", "is_seed", "label", "comment"}
 
 // TorrentStatus holds info about the state of a particular torrent
 type TorrentStatus struct {
@@ -116,7 +118,7 @@ func torrentStatusFromMap(data map[string]interface{}) TorrentStatus {
 	if v, ok := data["hash"]; ok {
 		res.Hash = v.(string)
 	}
-	if v, ok := data["finished"]; ok {
+	if v, ok := data["is_finished"]; ok {
 		res.Finished = v.(bool)
 	}
 	if v, ok := data["paused"]; ok {
@@ -127,6 +129,10 @@ func torrentStatusFromMap(data map[string]interface{}) TorrentStatus {
 	}
 	if v, ok := data["total_size"]; ok {
 		switch v := v.(type) {
+		case int8:
+			res.TotalSize = int(v)
+		case int16:
+			res.TotalSize = int(v)
 		case int32:
 			res.TotalSize = int(v)
 		case int64:
@@ -135,7 +141,7 @@ func torrentStatusFromMap(data map[string]interface{}) TorrentStatus {
 			panic("total_size of unknown type")
 		}
 	}
-	if v, ok := data["seeding"]; ok {
+	if v, ok := data["is_seed"]; ok {
 		res.Seeding = v.(bool)
 	}
 	if v, ok := data["name"]; ok {
