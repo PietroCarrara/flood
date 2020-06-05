@@ -84,7 +84,7 @@ func (c *Core) GetExternalIP() (net.IP, error) {
 // information.
 // Fields that do not exist will be discarded by the server
 // The returned array will be ordered lexicographically using the first provided key.
-func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keys ...string) ([]TorrentStatus, error) {
+func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keys ...TorrentStatusField) ([]TorrentStatus, error) {
 	data, err := c.f.conn.Request(c.f.NextID(), "core.get_torrents_status", filter, keys)
 
 	if err != nil {
@@ -104,11 +104,26 @@ func (c *Core) GetTorrentsStatus(filter map[string]interface{}, keys ...string) 
 	}
 
 	sort.Slice(torrents, func(i, j int) bool {
-		vi := fmt.Sprint(dict[torrents[i].Hash][keys[0]])
-		vj := fmt.Sprint(dict[torrents[j].Hash][keys[0]])
+		// Value of the first field of each element
+		vi := fmt.Sprint(dict[torrents[i].Hash][string(keys[0])])
+		vj := fmt.Sprint(dict[torrents[j].Hash][string(keys[0])])
 
 		return vi < vj
 	})
 
 	return torrents, nil
+}
+
+// RemoveTorrent removes a torrent, and optionally removes it's data,
+// returning whether it was successful or not
+func (c *Core) RemoveTorrent(id string, removeData bool) (bool, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.remove_torrent", id, removeData)
+	if err != nil {
+		return false, err
+	}
+
+	var res bool
+	rencode.ScanSlice(data, &res)
+
+	return res, nil
 }

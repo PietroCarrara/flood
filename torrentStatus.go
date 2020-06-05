@@ -6,7 +6,97 @@ import (
 
 // BasicData is a collection of fields that can be quickly loaded by the deluge server
 // but contain useful information about a torrent
-var BasicData = []string{"name", "hash", "is_finished", "paused", "progress", "total_size", "is_seed", "label", "comment"}
+var BasicData = []TorrentStatusField{
+	NameField,
+	HashField,
+	IsFinishedField,
+	PausedField,
+	ProgressField,
+	TotalSizeField,
+	IsSeedField,
+	CommentField,
+}
+
+// TorrentStatusField is a field of a torrent
+type TorrentStatusField string
+
+const (
+	ActiveTimeField                = "active_time"
+	SeedingTimeField               = "seeding_time"
+	FinishedTimeField              = "finished_time"
+	AllTimeDownloadField           = "all_time_download"
+	StorageModeField               = "storage_mode"
+	DistributedCopiesField         = "distributed_copies"
+	DownloadPayloadRateField       = "download_payload_rate"
+	FilePrioritiesField            = "file_priorities"
+	HashField                      = "hash"
+	AutoManagedField               = "auto_managed"
+	IsAutoManagedField             = "is_auto_managed"
+	IsFinishedField                = "is_finished"
+	MaxConnectionsField            = "max_connections"
+	MaxDownloadSpeedField          = "max_download_speed"
+	MaxUploadSlotsField            = "max_upload_slots"
+	MaxUploadSpeedField            = "max_upload_speed"
+	MessageField                   = "message"
+	MoveOnCompletedPathField       = "move_on_completed_path"
+	MoveOnCompletedField           = "move_on_completed"
+	NextAnnounceField              = "next_announce"
+	NumPeersField                  = "num_peers"
+	NumSeedsField                  = "num_seeds"
+	OwnerField                     = "owner"
+	PausedField                    = "paused"
+	PrioritizeFirstLastField       = "prioritize_first_last"
+	PrioritizeFirstLastPiecesField = "prioritize_first_last_pieces"
+	SequentialDownloadField        = "sequential_download"
+	ProgressField                  = "progress"
+	SharedField                    = "shared"
+	RemoveAtRatioField             = "remove_at_ratio"
+	SavePathField                  = "save_path"
+	DownloadLocationField          = "download_location"
+	SeedsPeersRatioField           = "seeds_peers_ratio"
+	SeedRankField                  = "seed_rank"
+	StateField                     = "state"
+	StopAtRatioField               = "stop_at_ratio"
+	StopRatioField                 = "stop_ratio"
+	TimeAddedField                 = "time_added"
+	TotalDoneField                 = "total_done"
+	TotalPayloadDownloadField      = "total_payload_download"
+	TotalPayloadUploadField        = "total_payload_upload"
+	TotalPeersField                = "total_peers"
+	TotalSeedsField                = "total_seeds"
+	TotalUploadedField             = "total_uploaded"
+	TotalWantedField               = "total_wanted"
+	TotalRemainingField            = "total_remaining"
+	TrackerField                   = "tracker"
+	TrackerHostField               = "tracker_host"
+	TrackersField                  = "trackers"
+	TrackerStatusField             = "tracker_status"
+	UploadPayloadRateField         = "upload_payload_rate"
+	CommentField                   = "comment"
+	CreatorField                   = "creator"
+	NumFilesField                  = "num_files"
+	NumPiecesField                 = "num_pieces"
+	PieceLengthField               = "piece_length"
+	PrivateField                   = "private"
+	TotalSizeField                 = "total_size"
+	EtaField                       = "eta"
+	FileProgressField              = "file_progress"
+	FilesField                     = "files"
+	OrigFilesField                 = "orig_files"
+	IsSeedField                    = "is_seed"
+	PeersField                     = "peers"
+	QueueField                     = "queue"
+	RatioField                     = "ratio"
+	CompletedTimeField             = "completed_time"
+	LastSeenCompleteField          = "last_seen_complete"
+	NameField                      = "name"
+	PiecesField                    = "pieces"
+	SeedModeField                  = "seed_mode"
+	SuperSeedingField              = "super_seeding"
+	TimeSinceDownloadField         = "time_since_download"
+	TimeSinceUploadField           = "time_since_upload"
+	TimeSinceTransferField         = "time_since_transfer"
+)
 
 // TorrentStatus holds info about the state of a particular torrent
 type TorrentStatus struct {
@@ -115,19 +205,19 @@ func torrentStatusFromMap(data map[string]interface{}) TorrentStatus {
 	// TODO: Upgrade rencode library so structs can be decoded
 	res := TorrentStatus{}
 
-	if v, ok := data["hash"]; ok {
+	if v, ok := data[HashField]; ok {
 		res.Hash = v.(string)
 	}
-	if v, ok := data["is_finished"]; ok {
+	if v, ok := data[IsFinishedField]; ok {
 		res.Finished = v.(bool)
 	}
-	if v, ok := data["paused"]; ok {
+	if v, ok := data[PausedField]; ok {
 		res.Paused = v.(bool)
 	}
-	if v, ok := data["progress"]; ok {
+	if v, ok := data[ProgressField]; ok {
 		res.Progress = v.(float32)
 	}
-	if v, ok := data["total_size"]; ok {
+	if v, ok := data[TotalSizeField]; ok {
 		switch v := v.(type) {
 		case int8:
 			res.TotalSize = int(v)
@@ -141,12 +231,16 @@ func torrentStatusFromMap(data map[string]interface{}) TorrentStatus {
 			panic("total_size of unknown type")
 		}
 	}
-	if v, ok := data["is_seed"]; ok {
+	if v, ok := data[IsSeedField]; ok {
 		res.Seeding = v.(bool)
 	}
-	if v, ok := data["name"]; ok {
+	if v, ok := data[MoveOnCompletedPathField]; ok {
+		res.MoveOnCompletedPath = v.(string)
+	}
+	if v, ok := data[NameField]; ok {
 		res.Name = v.(string)
 	}
+
 	if v, ok := data["label"]; ok {
 		res.Label = v.(string)
 	}
