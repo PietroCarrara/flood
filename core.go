@@ -73,6 +73,40 @@ func (c *Core) GetExternalIP() (net.IP, error) {
 	return net.ParseIP(ip), nil
 }
 
+// GetFreeSpaceDefault returns the number of free bytes at the default download location
+func (c *Core) GetFreeSpaceDefault() (int, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.get_free_space")
+
+	if err != nil {
+		return 0, err
+	}
+
+	var space int
+	_, err = rencode.ScanSlice(data, &space)
+	if err != nil {
+		return 0, err
+	}
+
+	return space, nil
+}
+
+// GetFreeSpace returns the number of free bytes at the path
+func (c *Core) GetFreeSpace(path string) (int, error) {
+	data, err := c.f.conn.Request(c.f.NextID(), "core.get_free_space", path)
+
+	if err != nil {
+		return 0, err
+	}
+
+	var space int
+	_, err = rencode.ScanSlice(data, &space)
+	if err != nil {
+		return 0, err
+	}
+
+	return space, nil
+}
+
 // GetTorrentsStatus returns the selected information about torrents that can be filtered.
 // The filter is a map in the form "field" => value, and will only retain torrents where
 // torrent.field == value.
