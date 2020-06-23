@@ -157,7 +157,7 @@ type TorrentStatus struct {
 	PieceLength          int
 	Private              bool
 	// Sum of the file sizes contained in this torrent, in bytes
-	TotalSize    int
+	TotalSize    uint64
 	Eta          int
 	FileProgress []float32
 	// Is this torrent being seeded at the moment?
@@ -220,13 +220,13 @@ func torrentStatusFromMap(data map[string]interface{}) TorrentStatus {
 	if v, ok := data[TotalSizeField]; ok {
 		switch v := v.(type) {
 		case int8:
-			res.TotalSize = int(v)
+			res.TotalSize = uint64(v)
 		case int16:
-			res.TotalSize = int(v)
+			res.TotalSize = uint64(v)
 		case int32:
-			res.TotalSize = int(v)
+			res.TotalSize = uint64(v)
 		case int64:
-			res.TotalSize = int(v)
+			res.TotalSize = uint64(v)
 		default:
 			panic("total_size of unknown type")
 		}

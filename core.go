@@ -74,14 +74,14 @@ func (c *Core) GetExternalIP() (net.IP, error) {
 }
 
 // GetFreeSpaceDefault returns the number of free bytes at the default download location
-func (c *Core) GetFreeSpaceDefault() (int, error) {
+func (c *Core) GetFreeSpaceDefault() (uint64, error) {
 	data, err := c.f.conn.Request(c.f.NextID(), "core.get_free_space")
 
 	if err != nil {
 		return 0, err
 	}
 
-	var space int
+	var space uint64
 	_, err = rencode.ScanSlice(data, &space)
 	if err != nil {
 		return 0, err
